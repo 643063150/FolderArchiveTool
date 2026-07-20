@@ -69,6 +69,9 @@ class ServerEditDialog(QDialog):
         self._from_addr = QLineEdit(self._config.get("from_addr", ""))
         self._from_addr.setPlaceholderText("发件人地址")
         layout.addRow("发件人：", self._from_addr)
+        self._sender_name = QLineEdit(self._config.get("sender_name", ""))
+        self._sender_name.setPlaceholderText("发件人显示名称（如：服务器A-归档系统）")
+        layout.addRow("发件人名：", self._sender_name)
         self._is_primary = CheckBox("设为主服务器", self)
         self._is_primary.setChecked(self._config.get("is_primary", False))
         layout.addRow("", self._is_primary)
@@ -87,6 +90,7 @@ class ServerEditDialog(QDialog):
             "username": self._username.text().strip(),
             "password": self._password.text(),
             "from_addr": self._from_addr.text().strip(),
+            "sender_name": self._sender_name.text().strip(),
             "is_primary": self._is_primary.isChecked(),
             "enabled": True,
         }

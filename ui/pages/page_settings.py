@@ -40,6 +40,17 @@ class PageSettings(QWidget):
         self._chk_auto_start = CheckBox("开机自动启动", self)
         basic_layout.addRow("启动：", self._chk_auto_start)
 
+        # 系统服务注册
+        service_row = QHBoxLayout()
+        self._btn_install_service = OutlinedPushButton("注册系统服务", self)
+        self._btn_install_service.clicked.connect(self._on_install_service)
+        service_row.addWidget(self._btn_install_service)
+        self._btn_uninstall_service = OutlinedPushButton("移除系统服务", self)
+        self._btn_uninstall_service.clicked.connect(self._on_uninstall_service)
+        service_row.addWidget(self._btn_uninstall_service)
+        service_row.addStretch()
+        basic_layout.addRow("系统服务：", service_row)
+
         self._chk_tray = CheckBox("最小化到系统托盘", self)
         basic_layout.addRow("托盘：", self._chk_tray)
 
@@ -134,6 +145,33 @@ class PageSettings(QWidget):
                 self._status_label.setText("已导入")
             except Exception as e:
                 QMessageBox.critical(self, "导入失败", str(e))
+
+    def _on_install_service(self):
+        """注册为 Windows 系统服务"""
+        import subprocess
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "core.windows_service", "install"],
+                capture_output=True, text=True, timeout=30
+            )
+            if "成功" in result.stdout or "success" in result.stdout.lower():
+                self._status_label.setText("✅ 系统服务注册成功")
+            else:
+                self._status_label.setText(f"❌ 注册失败: {result.stdout} {result.stderr}")
+        except Exception as e:
+            self._status_label.setText(f"❌ 注册失败: {e}")
+
+    def _on_uninstall_service(self):
+        """移除 Windows 系统服务"""
+        import subprocess
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "core.windows_service", "remove"],
+                capture_output=True, text=True, timeout=30
+            )
+            self._status_label.setText("✅ 系统服务已移除")
+        except Exception as e:
+            self._status_label.setText(f"❌ 移除失败: {e}")
 
     def _on_reset(self):
         reply = QMessageBox.question(self, "确认", "恢复默认配置？", QMessageBox.Yes | QMessageBox.No)

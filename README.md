@@ -7,9 +7,10 @@
 - **文件扫描**：自动识别 `2026-07-20` 格式命名的文件，按年月分组
 - **压缩归档**：按月打包为 zip，支持手动/定时执行
 - **安全校验**：CRC32 双重校验，校验通过才删除原文件
-- **邮件通知**：支持多邮件服务器（第三方 + 自建），可同时/备用发送
+- **邮件通知**：支持多邮件服务器（第三方 + 自建），可自定义发件人名称
 - **定时任务**：基于 APScheduler，支持 cron 表达式
 - **开机自启**：支持注册表和任务计划程序
+- **系统服务**：可注册为 Windows 服务，防止被手动关闭
 - **Material Design 3**：使用 QMaterialWidgets 组件库
 
 ## 架构设计
@@ -83,6 +84,27 @@ python main.py
 python build.py
 ```
 
+## 系统服务
+
+将程序注册为 Windows 服务，即使无人登录也会运行：
+
+```bash
+# 安装服务（需要管理员权限）
+python core/windows_service.py install
+
+# 启动/停止服务
+python core/windows_service.py start
+python core/windows_service.py stop
+
+# 移除服务
+python core/windows_service.py remove
+
+# 调试模式（前台运行）
+python core/windows_service.py debug
+```
+
+安装后可在 `services.msc` 中管理。
+
 ## 依赖
 
 | 包 | 用途 |
@@ -90,7 +112,7 @@ python build.py
 | PySide6 | Qt UI 框架 |
 | QMaterialWidgets | Material Design 3 组件 |
 | APScheduler | 定时任务调度 |
-| pywin32 | Windows API（回收站、注册表） |
+| pywin32 | Windows API（回收站、注册表、服务） |
 | cryptography | 密码加密 |
 
 ## 线程模型

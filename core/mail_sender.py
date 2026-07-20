@@ -230,8 +230,15 @@ class MailSender:
         server_name = server_config.get("name", "unknown")
 
         try:
-            msg["From"] = server_config.get("from_addr", server_config["username"])
-            logger.info(f"[邮件] 正在通过 {server_name} ({server_config['smtp_host']}:{server_config['smtp_port']}) 发送...")
+            # 设置发件人，优先使用自定义发件人名称
+            from_addr = server_config.get("from_addr", server_config["username"])
+            sender_name = server_config.get("sender_name", "")
+            if sender_name:
+                from email.header import Header
+                msg["From"] = f"{Header(sender_name, 'utf-8').encode()} <{from_addr}>"
+            else:
+                msg["From"] = from_addr
+            logger.info(f"[邮件] 正在通过 {server_name} ({server_config['smtp_host']}:{server_config['smtp_port']}) 发送，发件人: {msg['From']}")
 
             context = None
             if server_config.get("use_ssl"):
