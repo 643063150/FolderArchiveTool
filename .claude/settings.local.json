@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/64306/**)",
+      "Read(//d/workspace/**)",
+      "Bash(find /tmp -name \"QMaterialWidgets*.zip\")",
+      "Bash(unzip -q \"QMaterialWidgets-master.zip\" -d /tmp/qmw)",
+      "Read(//tmp/**)",
+      "Bash(pip install *)",
+      "Bash(python -c \"import qmaterialwidgets; print\\(dir\\(qmaterialwidgets\\)\\)\")",
+      "Bash(python -c \"import qmaterialwidgets; print\\(qmaterialwidgets.NavigationRail\\)\")"
+    ]
+  }
+}

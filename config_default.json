@@ -1,0 +1,36 @@
+{
+    "version": "1.0.0",
+    "general": {
+        "source_dir": "",
+        "output_dir": "",
+        "file_pattern": "*.*",
+        "date_regex": "",
+        "recursive": false,
+        "compression_format": "zip",
+        "compression_level": 6,
+        "auto_start": false,
+        "minimize_to_tray": true,
+        "delete_confirm": true,
+        "use_recycle_bin": true,
+        "backup_keep_days": 7,
+        "language": "zh_CN"
+    },
+    "mail": {
+        "enabled": false,
+        "send_mode": "all",
+        "servers": [],
+        "recipients": [],
+        "notify_on_success": true,
+        "notify_on_failure": true
+    },
+    "schedule": {
+        "enabled": false,
+        "jobs": []
+    },
+    "log": {
+        "level": "INFO",
+        "max_file_size_mb": 10,
+        "backup_count": 5,
+        "ui_max_lines": 1000
+    }
+}

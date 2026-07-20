@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# 打包输出
+build/
+dist/
+*.spec
+
+# 运行时生成
+logs/
+config.json
+config.key
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.claude/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# 测试数据
+test_data/
+test_*.py

@@ -1,0 +1,256 @@
+/*
+ * Material Design 3 (Material You) 全局样式表
+ * FolderArchiveTool
+ *
+ * 设计规范: https://m3.material.io/
+ * 基础字号: 18px（大两号于标准 14px）
+ * 圆角系统: none(0), xs(4), sm(8), md(12), lg(16), xl(28), full(100)
+ */
+
+/* ── 全局基础 ─────────────────────────────────────── */
+* {
+    font-family: "Microsoft YaHei UI", "Segoe UI Variable", "PingFang SC", sans-serif;
+    font-size: 18px;
+    color: #1A1C1E;
+}
+QWidget {
+    background: #FBFCFD;
+}
+QMainWindow {
+    background: #FBFCFD;
+}
+
+/* ── MD3 按钮 (Filled) ────────────────────────────── */
+QPushButton {
+    background: #1565C0;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 24px;
+    padding: 12px 32px;
+    font-size: 18px;
+    font-weight: 500;
+    min-height: 48px;
+    min-width: 80px;
+}
+QPushButton:hover {
+    background: #1976D2;
+}
+QPushButton:pressed {
+    background: #0D47A1;
+}
+QPushButton:disabled {
+    background: rgba(26, 28, 30, 0.12);
+    color: rgba(26, 28, 30, 0.38);
+}
+QPushButton:focus {
+    outline: none;
+}
+
+/* ── MD3 输入框 ───────────────────────────────────── */
+QLineEdit {
+    background: #FFFBFE;
+    border: none;
+    border-bottom: 2px solid #79747E;
+    border-radius: 4px 4px 0 0;
+    padding: 10px 16px;
+    selection-background-color: #D3E3FD;
+    min-height: 48px;
+    font-size: 18px;
+    color: #1A1C1E;
+}
+QLineEdit:focus {
+    border-bottom: 2px solid #1565C0;
+    background: #F4EFF4;
+}
+QLineEdit:disabled {
+    background: rgba(26, 28, 30, 0.04);
+    color: rgba(26, 28, 30, 0.38);
+    border-bottom-color: rgba(26, 28, 30, 0.12);
+}
+QLineEdit:hover {
+    border-bottom-color: #1A1C1E;
+    background: #F4EFF4;
+}
+
+/* ── MD3 表格 ─────────────────────────────────────── */
+QTableWidget {
+    background: #FFFFFF;
+    border: 1px solid #E3E3E4;
+    border-radius: 16px;
+    gridline-color: transparent;
+    selection-background-color: #D3E3FD;
+    selection-color: #001A40;
+    font-size: 18px;
+    outline: none;
+}
+QTableWidget::item {
+    padding: 18px 20px;
+    border-bottom: 1px solid #F1F1F2;
+}
+QTableWidget::item:hover {
+    background: #F9F9FA;
+}
+QTableWidget::item:selected {
+    background: #D3E3FD;
+    color: #001A40;
+}
+QHeaderView::section {
+    background: #F9F9FA;
+    border: none;
+    border-bottom: 2px solid #E3E3E4;
+    padding: 18px 20px;
+    font-weight: 600;
+    color: #46474A;
+    font-size: 16px;
+    text-align: left;
+}
+
+/* ── MD3 进度条 ───────────────────────────────────── */
+QProgressBar {
+    background: #D3E3FD;
+    border: none;
+    border-radius: 2px;
+    text-align: center;
+    height: 6px;
+}
+QProgressBar::chunk {
+    background: #1565C0;
+    border-radius: 2px;
+}
+
+/* ── MD3 复选框 ───────────────────────────────────── */
+QCheckBox {
+    spacing: 14px;
+    color: #1A1C1E;
+    font-size: 18px;
+    min-height: 24px;
+    padding: 6px 0;
+}
+QCheckBox::indicator {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #49454F;
+    border-radius: 3px;
+    background: transparent;
+}
+QCheckBox::indicator:hover {
+    border-color: #1565C0;
+    background: rgba(21, 101, 192, 0.08);
+}
+QCheckBox::indicator:checked {
+    background: #1565C0;
+    border-color: #1565C0;
+}
+
+/* ── MD3 滚动条 ───────────────────────────────────── */
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 6px 3px;
+}
+QScrollBar::handle:vertical {
+    background: #C7C7C9;
+    border-radius: 5px;
+    min-height: 48px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #909194;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+    width: 0;
+}
+QScrollBar:horizontal {
+    background: transparent;
+    height: 10px;
+    margin: 3px 6px;
+}
+QScrollBar::handle:horizontal {
+    background: #C7C7C9;
+    border-radius: 5px;
+    min-width: 48px;
+}
+QScrollBar::handle:horizontal:hover {
+    background: #909194;
+}
+
+/* ── MD3 工具提示 ─────────────────────────────────── */
+QToolTip {
+    background: #2F3134;
+    color: #F1F1F2;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 15px;
+}
+
+/* ── MD3 对话框 ───────────────────────────────────── */
+QDialog {
+    background: #F4F4F5;
+}
+
+/* ── MD3 文本编辑区 ───────────────────────────────── */
+QTextEdit {
+    background: #1A1C1E;
+    color: #E6E1E5;
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-family: 'Cascadia Code', 'Consolas', monospace;
+    font-size: 16px;
+    line-height: 1.6;
+    selection-background-color: #1565C0;
+    selection-color: #FFFFFF;
+}
+
+/* ── MD3 组合框 ───────────────────────────────────── */
+QComboBox {
+    background: #FFFBFE;
+    border: none;
+    border-bottom: 2px solid #79747E;
+    border-radius: 4px 4px 0 0;
+    padding: 10px 16px;
+    min-height: 48px;
+    selection-background-color: #D3E3FD;
+    font-size: 18px;
+}
+QComboBox:hover {
+    border-bottom-color: #1A1C1E;
+    background: #F4EFF4;
+}
+QComboBox:focus {
+    border-bottom: 2px solid #1565C0;
+    background: #F4EFF4;
+}
+QComboBox::drop-down {
+    border: none;
+    width: 36px;
+}
+QComboBox QAbstractItemView {
+    background: #FFFBFE;
+    border: 1px solid #E3E3E4;
+    border-radius: 10px;
+    padding: 10px;
+    selection-background-color: #D3E3FD;
+    selection-color: #001A40;
+}
+
+/* ── MD3 微调框 ───────────────────────────────────── */
+QSpinBox {
+    background: #FFFBFE;
+    border: none;
+    border-bottom: 2px solid #79747E;
+    border-radius: 4px 4px 0 0;
+    padding: 10px 16px;
+    min-width: 72px;
+    selection-background-color: #D3E3FD;
+    font-size: 18px;
+}
+QSpinBox:focus {
+    border-bottom: 2px solid #1565C0;
+    background: #F4EFF4;
+}
+QSpinBox:hover {
+    border-bottom-color: #1A1C1E;
+    background: #F4EFF4;
+}
