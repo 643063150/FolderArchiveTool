@@ -1,5 +1,5 @@
 """
-运行日志页面 - Material Design 3 风格
+运行日志页面 — Material Design 3 精修版
 """
 
 import os
@@ -7,20 +7,21 @@ import re
 import threading
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QComboBox,
-    QLineEdit, QFileDialog, QMessageBox,
+    QLineEdit, QFileDialog, QMessageBox, QFrame,
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QTextCursor
+from PySide6.QtGui import QTextCursor, QColor
 from qmaterialwidgets import (
     FilledPushButton, OutlinedPushButton, TonalPushButton,
     OutlinedCardWidget, BodyLabel, StrongBodyLabel,
 )
 
 from core.config_manager import ConfigManager
+from assets.styles.material_colors import Colors
 
 
 class PageLog(QWidget):
-    """日志查看页面 - MD3 风格"""
+    """日志查看页面 — MD3 精修版"""
 
     def __init__(self, config: ConfigManager, service, scheduler, parent=None):
         super().__init__(parent)
@@ -33,60 +34,123 @@ class PageLog(QWidget):
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(28, 28, 28, 28)
+        layout.setContentsMargins(32, 28, 32, 28)
         layout.setSpacing(20)
 
-        # 标题
-        title = StrongBodyLabel("运行日志", self)
-        layout.addWidget(title)
+        # ═══ 页面标题 ═══════════════════════════════════
+        header = QHBoxLayout()
+        title = StrongBodyLabel("运行日志")
+        title.setStyleSheet(f"font-size: 24px; font-weight: 700; color: {Colors.on_surface};")
+        header.addWidget(title)
+        header.addStretch()
 
-        # 工具栏
-        toolbar = QHBoxLayout()
-        toolbar.setSpacing(8)
+        # 统计信息
+        self._status = BodyLabel("就绪")
+        self._status.setStyleSheet(f"""
+            color: {Colors.on_surface_variant}; font-size: 12px;
+            padding: 4px 14px; background: {Colors.surface_container};
+            border-radius: 12px;
+        """)
+        header.addWidget(self._status)
 
-        toolbar.addWidget(BodyLabel("级别:", self))
+        layout.addLayout(header)
+
+        desc = BodyLabel("实时日志输出 — 支持过滤、搜索、导出")
+        desc.setStyleSheet(f"color: {Colors.on_surface_variant}; font-size: 13px;")
+        layout.addWidget(desc)
+
+        # ═══ 工具栏 ═════════════════════════════════════
+        toolbar = QWidget()
+        toolbar.setStyleSheet(f"""
+            QWidget {{
+                background: {Colors.surface_container};
+                border-radius: 12px;
+            }}
+        """)
+        toolbar_layout = QHBoxLayout(toolbar)
+        toolbar_layout.setContentsMargins(16, 10, 16, 10)
+        toolbar_layout.setSpacing(10)
+
+        # 级别过滤
+        level_label = BodyLabel("📊 级别:")
+        level_label.setStyleSheet(f"color: {Colors.on_surface_variant}; background: transparent;")
+        toolbar_layout.addWidget(level_label)
+
         self._combo_level = QComboBox(self)
         self._combo_level.addItems(["全部", "INFO", "WARNING", "ERROR", "DEBUG", "定时任务"])
-        self._combo_level.setFixedWidth(100)
+        self._combo_level.setFixedWidth(110)
         self._combo_level.currentTextChanged.connect(self._filter_logs)
-        toolbar.addWidget(self._combo_level)
+        self._combo_level.setStyleSheet(f"""
+            QComboBox {{
+                background: {Colors.surface}; border: 1px solid {Colors.outline_variant};
+                border-radius: 8px; padding: 6px 12px; min-height: 20px;
+            }}
+        """)
+        toolbar_layout.addWidget(self._combo_level)
 
-        toolbar.addSpacing(8)
-        toolbar.addWidget(BodyLabel("搜索:", self))
+        # 分隔
+        sep = QFrame()
+        sep.setFrameShape(QFrame.VLine)
+        sep.setFixedWidth(1)
+        sep.setStyleSheet(f"background: {Colors.outline_variant}; max-width: 1px;")
+        toolbar_layout.addWidget(sep)
+
+        # 搜索
+        search_icon = BodyLabel("🔍")
+        search_icon.setStyleSheet("background: transparent;")
+        toolbar_layout.addWidget(search_icon)
         self._input_search = QLineEdit(self)
-        self._input_search.setPlaceholderText("输入关键词...")
-        self._input_search.setMinimumWidth(180)
+        self._input_search.setPlaceholderText("搜索关键词...")
+        self._input_search.setMinimumWidth(160)
         self._input_search.textChanged.connect(self._filter_logs)
-        toolbar.addWidget(self._input_search)
+        self._input_search.setStyleSheet(f"""
+            QLineEdit {{
+                background: {Colors.surface}; border: 1px solid {Colors.outline_variant};
+                border-radius: 8px; padding: 6px 14px; min-height: 20px;
+            }}
+            QLineEdit:focus {{ border: 2px solid {Colors.primary}; }}
+        """)
+        toolbar_layout.addWidget(self._input_search)
 
-        toolbar.addStretch()
+        toolbar_layout.addStretch()
 
-        btn_refresh = FilledPushButton("刷新", self)
+        # 操作按钮
+        btn_refresh = OutlinedPushButton("🔄 刷新", self)
+        btn_refresh.setToolTip("刷新日志")
         btn_refresh.clicked.connect(self._refresh)
-        toolbar.addWidget(btn_refresh)
+        toolbar_layout.addWidget(btn_refresh)
 
-        btn_clear = TonalPushButton("清空", self)
+        btn_clear = OutlinedPushButton("🗑 清空", self)
+        btn_clear.setToolTip("清空日志")
         btn_clear.clicked.connect(self._clear)
-        toolbar.addWidget(btn_clear)
+        toolbar_layout.addWidget(btn_clear)
 
-        btn_export = OutlinedPushButton("导出", self)
+        btn_export = TonalPushButton("📤 导出", self)
         btn_export.clicked.connect(self._export)
-        toolbar.addWidget(btn_export)
+        toolbar_layout.addWidget(btn_export)
 
-        layout.addLayout(toolbar)
+        layout.addWidget(toolbar)
 
-        # 日志显示区
+        # ═══ 日志显示区 ═════════════════════════════════
         self._text = QTextEdit()
         self._text.setReadOnly(True)
+        self._text.setStyleSheet(f"""
+            QTextEdit {{
+                background: #1A1C1E;
+                color: #E6E1E5;
+                border: 1px solid #2F3134;
+                border-radius: 14px;
+                padding: 16px;
+                font-family: "Cascadia Code", "JetBrains Mono", "Consolas", monospace;
+                font-size: 13px;
+                line-height: 1.7;
+                selection-background-color: #1565C0;
+            }}
+        """)
         layout.addWidget(self._text)
 
-        # 状态栏
-        self._status = BodyLabel("就绪", self)
-        self._status.setStyleSheet("color: #999; font-size: 12px;")
-        layout.addWidget(self._status)
-
     def on_log_message(self, level: str, message: str):
-        """日志回调（由 pyqtSignal 从主线程调用，线程安全）"""
+        """日志回调（pyqtSignal 线程安全）"""
         with self._logs_lock:
             self._all_logs.append((level, message))
             if len(self._all_logs) > self._max_lines:
@@ -94,22 +158,46 @@ class PageLog(QWidget):
             if self._matches_filter(level, message):
                 self._append_log(level, message)
             count = len(self._all_logs)
-        self._status.setText(f"共 {count} 条日志")
+        self._status.setText(f"📋 共 {count} 条日志")
 
     def _append_log(self, level, message):
-        log_colors = {"INFO": "#80CBC4", "WARNING": "#FFD54F", "ERROR": "#EF9A9A", "DEBUG": "#B0BEC5"}
+        """带颜色标记的日志行"""
+        log_colors = {
+            "INFO": "#80CBC4",
+            "WARNING": "#FFD54F",
+            "ERROR": "#EF9A9A",
+            "DEBUG": "#B0BEC5",
+        }
         color = log_colors.get(level, "#ECEFF1")
         safe_msg = message.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        html = f'<span style="color: {color};">[{level}]</span> {safe_msg}<br>'
-        self._text.insertHtml(html)
+
+        timestamp = ""
+        time_colors = {"INFO": "#546E7A", "WARNING": "#8D6E63", "ERROR": "#BF360C", "DEBUG": "#455A64"}
+        tc = time_colors.get(level, "#546E7A")
+        # 尝试提取时间戳
+        match = re.match(r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})', safe_msg)
+        if match:
+            ts = match.group(1)
+            rest = safe_msg[len(ts):]
+            html = (
+                f'<span style="color: {tc};">{ts}</span>'
+                f'<span style="color: {color};">{rest}</span>'
+            )
+        else:
+            html = f'<span style="color: {color};">[{level}]</span> {safe_msg}'
+
+        self._text.insertHtml(html + "<br>")
         cursor = self._text.textCursor()
         cursor.movePosition(QTextCursor.End)
         self._text.setTextCursor(cursor)
 
+        # 自动滚动到底部
+        scrollbar = self._text.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
+
     def _matches_filter(self, level, message):
         lvl = self._combo_level.currentText()
         search = self._input_search.text().lower()
-        # 定时任务专用过滤
         if lvl == "定时任务":
             return "[定时]" in message
         if lvl != "全部" and level != lvl:
@@ -133,7 +221,7 @@ class PageLog(QWidget):
         self._text.clear()
         with self._logs_lock:
             self._all_logs.clear()
-        self._status.setText("已清空")
+        self._status.setText("🗑 已清空")
 
     def _export(self):
         path, _ = QFileDialog.getSaveFileName(self, "导出日志", "app.log", "Text (*.txt)")
@@ -143,7 +231,7 @@ class PageLog(QWidget):
             with open(path, "w", encoding="utf-8") as f:
                 for level, message in logs_copy:
                     f.write(f"[{level}] {message}\n")
-            self._status.setText(f"已导出: {path}")
+            self._status.setText(f"📤 已导出: {path}")
 
     def _load_log_file(self):
         log_path = os.path.join("logs", "app.log")
@@ -163,6 +251,7 @@ class PageLog(QWidget):
             with self._logs_lock:
                 self._all_logs = new_logs
             self._filter_logs()
-            self._status.setText(f"已加载 {len(new_logs)} 条")
+            count = len(new_logs)
+            self._status.setText(f"📋 已加载 {count} 条日志")
         except Exception as e:
-            self._status.setText(f"加载失败: {e}")
+            self._status.setText(f"⚠️ 加载失败: {e}")

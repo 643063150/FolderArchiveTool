@@ -6,9 +6,10 @@ Material Design Icons 矢量图标系统
 
 from PySide6.QtWidgets import QWidget, QLabel
 from PySide6.QtCore import Qt, QSize, QByteArray, QPointF, QRectF
+from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtGui import (
     QPainter, QPainterPath, QColor, QPen, QPixmap,
-    QIcon, QIconEngine, QSvgRenderer,
+    QIcon, QIconEngine,
 )
 
 
