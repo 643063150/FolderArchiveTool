@@ -2,6 +2,8 @@
 通用设置页面 - Material Design 3 风格
 """
 
+import os
+import sys
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, QMessageBox,
     QFormLayout, QComboBox, QSpinBox,
@@ -26,7 +28,7 @@ class PageSettings(QWidget):
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(28, 28, 28, 28)
+        layout.setContentsMargins(32, 32, 32, 32)
         layout.setSpacing(20)
 
         title = SubtitleLabel("通用设置", self)
@@ -37,19 +39,10 @@ class PageSettings(QWidget):
         basic_layout = QFormLayout(basic_card)
         basic_layout.setContentsMargins(20, 20, 20, 20)
 
+        # 开机自启
         self._chk_auto_start = CheckBox("开机自动启动", self)
+        self._chk_auto_start.setChecked(self._auto_start.is_task_scheduler_enabled())
         basic_layout.addRow("启动：", self._chk_auto_start)
-
-        # 系统服务注册
-        service_row = QHBoxLayout()
-        self._btn_install_service = OutlinedPushButton("注册系统服务", self)
-        self._btn_install_service.clicked.connect(self._on_install_service)
-        service_row.addWidget(self._btn_install_service)
-        self._btn_uninstall_service = OutlinedPushButton("移除系统服务", self)
-        self._btn_uninstall_service.clicked.connect(self._on_uninstall_service)
-        service_row.addWidget(self._btn_uninstall_service)
-        service_row.addStretch()
-        basic_layout.addRow("系统服务：", service_row)
 
         self._chk_tray = CheckBox("最小化到系统托盘", self)
         basic_layout.addRow("托盘：", self._chk_tray)
@@ -71,13 +64,6 @@ class PageSettings(QWidget):
 
         self._chk_confirm = CheckBox("删除前二次确认", self)
         safety_layout.addRow("确认：", self._chk_confirm)
-
-        self._chk_recycle = CheckBox("删除时移入回收站", self)
-        safety_layout.addRow("回收站：", self._chk_recycle)
-
-        self._spin_backup_days = QSpinBox()
-        self._spin_backup_days.setRange(0, 365)
-        safety_layout.addRow("备份保留天数：", self._spin_backup_days)
 
         layout.addWidget(safety_card)
 
@@ -105,27 +91,49 @@ class PageSettings(QWidget):
         layout.addStretch()
 
     def _load_config(self):
-        self._chk_auto_start.setChecked(self._auto_start.is_auto_start_enabled())
+        self._chk_auto_start.setChecked(self._auto_start.is_task_scheduler_enabled())
         self._chk_tray.setChecked(self._config.get("general.minimize_to_tray", True))
         self._combo_format.setCurrentText(self._config.get("general.compression_format", "zip"))
         self._spin_level.setValue(self._config.get("general.compression_level", 6))
         self._chk_confirm.setChecked(self._config.get("general.delete_confirm", True))
-        self._chk_recycle.setChecked(self._config.get("general.use_recycle_bin", True))
-        self._spin_backup_days.setValue(self._config.get("general.backup_keep_days", 7))
 
     def _on_save(self):
+        import logging
+        log = logging.getLogger("FolderArchiveTool")
+
         self._config.set("general.minimize_to_tray", self._chk_tray.isChecked())
         self._config.set("general.compression_format", self._combo_format.currentText())
         self._config.set("general.compression_level", self._spin_level.value())
         self._config.set("general.delete_confirm", self._chk_confirm.isChecked())
-        self._config.set("general.use_recycle_bin", self._chk_recycle.isChecked())
-        self._config.set("general.backup_keep_days", self._spin_backup_days.value())
         self._config.save()
+        log.info("[设置] 配置已保存")
+
+        # 处理开机自启
         if self._chk_auto_start.isChecked():
-            self._auto_start.enable_auto_start()
+            log.info("[设置] 用户启用开机自启，尝试创建任务计划程序...")
+            if self._auto_start.enable_task_scheduler():
+                # 验证是否真的创建成功
+                if self._auto_start.is_task_scheduler_enabled():
+                    self._status_label.setText("[OK] 开机自启已启用（任务计划程序）")
+                    log.info("[设置] 开机自启已启用并验证成功")
+                else:
+                    self._status_label.setText("[WARN] 任务创建但验证失败，尝试注册表方式...")
+                    log.warning("[设置] 任务计划程序创建后验证失败")
+                    if self._auto_start.enable_registry():
+                        self._status_label.setText("[OK] 开机自启已启用（注册表方式）")
+                    else:
+                        self._status_label.setText("[FAIL] 所有方式均失败")
+            else:
+                log.info("[设置] 任务计划程序创建失败，尝试注册表方式...")
+                if self._auto_start.enable_registry():
+                    self._status_label.setText("[OK] 开机自启已启用（注册表方式）")
+                else:
+                    self._status_label.setText("[FAIL] 开机自启启用失败")
         else:
-            self._auto_start.disable_auto_start()
-        self._status_label.setText("已保存")
+            log.info("[设置] 用户禁用开机自启")
+            self._auto_start.disable_task_scheduler()
+            self._auto_start.disable_registry()
+            self._status_label.setText("[OK] 开机自启已禁用")
 
     def _on_export(self):
         path, _ = QFileDialog.getSaveFileName(self, "导出配置", "config.json", "JSON (*.json)")
@@ -145,33 +153,6 @@ class PageSettings(QWidget):
                 self._status_label.setText("已导入")
             except Exception as e:
                 QMessageBox.critical(self, "导入失败", str(e))
-
-    def _on_install_service(self):
-        """注册为 Windows 系统服务"""
-        import subprocess
-        try:
-            result = subprocess.run(
-                [sys.executable, "-m", "core.windows_service", "install"],
-                capture_output=True, text=True, timeout=30
-            )
-            if "成功" in result.stdout or "success" in result.stdout.lower():
-                self._status_label.setText("✅ 系统服务注册成功")
-            else:
-                self._status_label.setText(f"❌ 注册失败: {result.stdout} {result.stderr}")
-        except Exception as e:
-            self._status_label.setText(f"❌ 注册失败: {e}")
-
-    def _on_uninstall_service(self):
-        """移除 Windows 系统服务"""
-        import subprocess
-        try:
-            result = subprocess.run(
-                [sys.executable, "-m", "core.windows_service", "remove"],
-                capture_output=True, text=True, timeout=30
-            )
-            self._status_label.setText("✅ 系统服务已移除")
-        except Exception as e:
-            self._status_label.setText(f"❌ 移除失败: {e}")
 
     def _on_reset(self):
         reply = QMessageBox.question(self, "确认", "恢复默认配置？", QMessageBox.Yes | QMessageBox.No)

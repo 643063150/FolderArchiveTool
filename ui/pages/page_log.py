@@ -46,7 +46,7 @@ class PageLog(QWidget):
 
         toolbar.addWidget(BodyLabel("级别:", self))
         self._combo_level = QComboBox(self)
-        self._combo_level.addItems(["全部", "INFO", "WARNING", "ERROR", "DEBUG"])
+        self._combo_level.addItems(["全部", "INFO", "WARNING", "ERROR", "DEBUG", "定时任务"])
         self._combo_level.setFixedWidth(100)
         self._combo_level.currentTextChanged.connect(self._filter_logs)
         toolbar.addWidget(self._combo_level)
@@ -109,6 +109,9 @@ class PageLog(QWidget):
     def _matches_filter(self, level, message):
         lvl = self._combo_level.currentText()
         search = self._input_search.text().lower()
+        # 定时任务专用过滤
+        if lvl == "定时任务":
+            return "[定时]" in message
         if lvl != "全部" and level != lvl:
             return False
         if search and search not in message.lower():

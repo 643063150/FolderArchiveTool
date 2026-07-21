@@ -261,14 +261,22 @@ class MainWindow(QMainWindow):
 
     def refresh_all_pages(self):
         """配置导入后刷新所有页面"""
+        # 重新加载定时任务
+        self._scheduler.load_jobs()
         for page in self._pages:
             if hasattr(page, '_load_config'):
                 page._load_config()
+            if hasattr(page, '_refresh_jobs'):
+                page._refresh_jobs()
 
     def _init_scheduler(self):
         self._scheduler.set_job_function(self._on_scheduled_run)
         # 恢复持久化的定时任务
         self._scheduler.load_jobs()
+        # 刷新定时任务页面显示
+        for page in self._pages:
+            if hasattr(page, '_refresh_jobs'):
+                page._refresh_jobs()
         if self._config.get("schedule.enabled", False):
             self._scheduler.start()
 

@@ -29,3 +29,6 @@ Thumbs.db
 # 测试数据
 test_data/
 test_*.py
+
+# Windows 重定向产生的垃圾文件
+nul

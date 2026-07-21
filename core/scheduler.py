@@ -39,16 +39,33 @@ class ArchiveScheduler:
                 # 从 trigger 中提取 cron 表达式以便恢复
                 trigger_str = str(job.trigger)
                 cron_expr = self._extract_cron_from_trigger(trigger_str)
+                # 判断原始任务类型
+                job_type = self._detect_job_type(job)
                 jobs.append({
                     "id": job.id,
                     "name": job.name,
                     "trigger": trigger_str,
                     "cron": cron_expr,
+                    "job_type": job_type,
                 })
             self._config.set("schedule.jobs", jobs)
             self._config.save()
             import logging
             logging.getLogger("FolderArchiveTool").debug(f"[定时] 已保存 {len(jobs)} 个任务到配置")
+
+    @staticmethod
+    def _detect_job_type(job) -> str:
+        """检测任务类型"""
+        trigger_str = str(job.trigger)
+        name = job.name or ""
+        if "每月归档" in name:
+            return "monthly"
+        elif "每周归档" in name:
+            return "weekly"
+        elif "每天归档" in name:
+            return "daily"
+        else:
+            return "custom"
 
     @staticmethod
     def _extract_cron_from_trigger(trigger_str: str) -> str:
@@ -84,16 +101,55 @@ class ArchiveScheduler:
         loaded = 0
         for job_info in jobs:
             try:
+                job_id = job_info.get("id", "")
+                name = job_info.get("name", "")
                 cron_expr = job_info.get("cron", "")
-                if cron_expr:
-                    self.add_custom_cron(cron_expr, job_id=job_info["id"])
-                    loaded += 1
+                job_type = job_info.get("job_type", "")
+
+                if not cron_expr:
+                    logger.warning(f"[定时] 任务 {job_id} 缺少 cron 表达式，跳过")
+                    continue
+
+                # 如果没有 job_type，从 cron 表达式推断
+                if not job_type:
+                    job_type = self._infer_job_type(cron_expr)
+
+                # 根据类型使用对应的创建函数
+                parts = cron_expr.split()
+                if job_type == "monthly" and len(parts) >= 3:
+                    self.add_monthly_job(day=int(parts[2]), hour=int(parts[1]), minute=int(parts[0]), job_id=job_id)
+                elif job_type == "weekly" and len(parts) >= 5:
+                    dow_map = {"sun": "sun", "mon": "mon", "tue": "tue", "wed": "wed", "thu": "thu", "fri": "fri", "sat": "sat"}
+                    dow = dow_map.get(parts[4], parts[4])
+                    self.add_weekly_job(day_of_week=dow, hour=int(parts[1]), minute=int(parts[0]), job_id=job_id)
+                elif job_type == "daily" and len(parts) >= 2:
+                    self.add_custom_cron(f"{parts[0]} {parts[1]} * * *", job_id=job_id)
                 else:
-                    logger.warning(f"[定时] 任务 {job_info.get('id')} 缺少 cron 表达式，跳过")
+                    self.add_custom_cron(cron_expr, job_id=job_id)
+
+                loaded += 1
             except Exception as e:
-                logger.warning(f"[定时] 恢复任务失败: {e}")
+                logger.warning(f"[定时] 恢复任务失败: {e}", exc_info=True)
         if loaded > 0:
             logger.info(f"[定时] 从配置恢复了 {loaded} 个定时任务")
+
+    @staticmethod
+    def _infer_job_type(cron_expr: str) -> str:
+        """从 cron 表达式推断任务类型"""
+        parts = cron_expr.split()
+        if len(parts) != 5:
+            return "custom"
+        minute, hour, day, month, dow = parts
+        # 每月: day 是数字，month 是 *
+        if day != "*" and month == "*" and dow == "*":
+            return "monthly"
+        # 每周: dow 不是 *，day 是 *
+        if dow != "*" and day == "*" and month == "*":
+            return "weekly"
+        # 每天: day *, month *, dow *
+        if day == "*" and month == "*" and dow == "*":
+            return "daily"
+        return "custom"
 
     def add_monthly_job(
         self,
@@ -233,14 +289,25 @@ class ArchiveScheduler:
 
     def list_jobs(self) -> list:
         """列出所有任务"""
+        import logging
+        logger = logging.getLogger("FolderArchiveTool")
         jobs = []
         for job in self._scheduler.get_jobs():
-            # APScheduler 3.10+ 使用 next_run_time (datetime|None)
+            next_run = "未调度"
             try:
-                nrt = job.next_run_time
-                next_run = str(nrt) if nrt else "未调度"
-            except Exception:
+                # APScheduler 3.10+ next_run_time 可能不存在或为 None
+                nrt = getattr(job, 'next_run_time', None)
+                if nrt:
+                    try:
+                        next_run = nrt.strftime("%Y-%m-%d %H:%M:%S")
+                    except Exception:
+                        next_run = str(nrt)
+                else:
+                    next_run = "未调度"
+                logger.debug(f"[定时] list_jobs: {job.id}, next_run={nrt}, trigger={job.trigger}")
+            except Exception as e:
                 next_run = "未知"
+                logger.error(f"[定时] list_jobs 获取下次执行时间失败: {job.id}, 错误: {e}")
             jobs.append({
                 "id": job.id,
                 "name": job.name,
@@ -251,18 +318,18 @@ class ArchiveScheduler:
 
     def start(self):
         """启动调度器"""
+        import logging
+        logger = logging.getLogger("FolderArchiveTool")
         if not self._scheduler.running:
             self._scheduler.start()
-            import logging
-            logger = logging.getLogger("FolderArchiveTool")
             logger.info("[定时] 调度器已启动")
             # 列出所有已调度的任务
             jobs = self._scheduler.get_jobs()
             for job in jobs:
-                logger.info(f"[定时] 已调度任务: {job.name}, 下次执行: {job.next_run_time}")
+                nrt = getattr(job, 'next_run_time', None)
+                logger.info(f"[定时] 已调度任务: {job.name}, 下次执行: {nrt}, 触发器: {job.trigger}")
         else:
-            import logging
-            logging.getLogger("FolderArchiveTool").info("[定时] 调度器已在运行中")
+            logger.info("[定时] 调度器已在运行中")
 
     def stop(self, timeout=10):
         """安全停止调度器（等待运行中任务完成）"""

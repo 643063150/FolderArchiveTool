@@ -2,12 +2,14 @@
 定时任务页面 - Material Design 3 风格
 """
 
+import threading
+from datetime import datetime
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
     QHeaderView, QMessageBox, QAbstractItemView, QComboBox, QSpinBox,
     QDialog, QDialogButtonBox, QFormLayout, QTimeEdit, QLineEdit, QLabel,
 )
-from PySide6.QtCore import Qt, QTime
+from PySide6.QtCore import Qt, QTime, QTimer
 from PySide6.QtGui import QFont
 from qmaterialwidgets import (
     FilledPushButton, OutlinedPushButton, TonalPushButton,
@@ -88,6 +90,16 @@ class PageSchedule(QWidget):
         self._init_ui()
         self._refresh_jobs()
 
+        # 实时倒计时刷新器（每秒刷新）
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._refresh_jobs)
+        self._timer.start(1000)  # 1秒
+
+    def showEvent(self, event):
+        """页面显示时刷新"""
+        self._refresh_jobs()
+        super().showEvent(event)
+
     def _init_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(28, 28, 28, 28)
@@ -115,8 +127,8 @@ class PageSchedule(QWidget):
         job_layout.addWidget(job_title)
 
         self._table = QTableWidget()
-        self._table.setColumnCount(3)
-        self._table.setHorizontalHeaderLabels(["名称", "调度", "下次执行"])
+        self._table.setColumnCount(4)
+        self._table.setHorizontalHeaderLabels(["名称", "调度", "下次执行", "剩余时间"])
         self._table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self._table.setMinimumHeight(150)
@@ -157,14 +169,74 @@ class PageSchedule(QWidget):
         layout.addStretch()
 
     def _refresh_jobs(self):
+        """刷新任务列表（含实时倒计时），保持选中状态"""
+        # 保存当前选中的任务 ID
+        selected_id = self._get_selected_job_id()
+
         jobs = self._scheduler.list_jobs()
         self._table.setRowCount(0)
+        now = datetime.now()
         for job in jobs:
             row = self._table.rowCount()
             self._table.insertRow(row)
             self._table.setItem(row, 0, QTableWidgetItem(job.get("name", "")))
             self._table.setItem(row, 1, QTableWidgetItem(job.get("trigger", "")))
             self._table.setItem(row, 2, QTableWidgetItem(job.get("next_run", "")))
+            # 计算剩余时间
+            remaining = self._calc_remaining(job.get("next_run", ""), now)
+            self._table.setItem(row, 3, QTableWidgetItem(remaining))
+
+        # 恢复选中状态
+        if selected_id:
+            self._select_job_by_id(selected_id)
+
+        if self._service.is_running:
+            self._status_label.setText("归档任务正在运行中...")
+
+    def _get_selected_job_id(self) -> str:
+        """获取当前选中行的任务 ID"""
+        row = self._table.currentRow()
+        if row < 0:
+            return ""
+        # 从 jobs 列表获取对应 ID
+        jobs = self._scheduler.list_jobs()
+        if row < len(jobs):
+            return jobs[row].get("id", "")
+        return ""
+
+    def _select_job_by_id(self, job_id: str):
+        """根据任务 ID 选中对应行"""
+        jobs = self._scheduler.list_jobs()
+        for i, job in enumerate(jobs):
+            if job.get("id") == job_id:
+                self._table.selectRow(i)
+                break
+
+    @staticmethod
+    def _calc_remaining(next_run_str: str, now: datetime) -> str:
+        """计算距离下次执行的剩余时间"""
+        if not next_run_str or next_run_str in ("未调度", "未知"):
+            return "-"
+        try:
+            # 解析时间字符串（可能带时区）
+            # 格式: 2026-08-21 11:37:00+08:00
+            if "+" in next_run_str:
+                next_run_str = next_run_str[:next_run_str.rfind("+")]
+            next_run = datetime.strptime(next_run_str, "%Y-%m-%d %H:%M:%S")
+            delta = next_run - now
+            if delta.total_seconds() <= 0:
+                return "执行中..."
+            days = delta.days
+            hours, remainder = divmod(delta.seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            if days > 0:
+                return f"{days}天{hours}时{minutes}分"
+            elif hours > 0:
+                return f"{hours}时{minutes}分{seconds}秒"
+            else:
+                return f"{minutes}分{seconds}秒"
+        except Exception:
+            return "-"
 
     def _on_enable_toggle(self, enabled):
         self._config.set("schedule.enabled", enabled)
